@@ -59,12 +59,30 @@ jobs:
           test ! -e dist/index.html
           grep -q 'kept when minifyHtml is false' dist/de/index.html
 
+      - name: Markdown pages render with frontmatter, ids, links and Eta
+        working-directory: test/fixtures/single-locale
+        run: |
+          set -e
+          grep -q '<title>Guide</title>' dist/de/guide.html
+          grep -q '<h2 id="getting-started">' dist/de/guide.html
+          grep -q 'more.html#details' dist/de/guide.html
+          grep -q '&lt;%= not.evaluated %&gt;' dist/de/guide.html
+          grep -q '<footer>fixture</footer>' dist/de/guide.html
+          grep -q '<p>Hallo</p>' dist/de/more.html
+          grep -q '<li>second</li>' dist/de/more.html
+
       - name: Single-locale fixture fails the build on a broken page
         working-directory: test/fixtures/single-locale
         run: |
           printf '<%%= missing.value %%>\n' > src/pages/broken.eta
           if npx vite build; then
             echo "::error::vite build passed with a page that fails to render"
+            exit 1
+          fi
+          rm src/pages/broken.eta
+          printf -- '---\neta: true\n---\n<%%= missing.value %%>\n' > src/pages/broken.md
+          if npx vite build; then
+            echo "::error::vite build passed with a Markdown page that fails to render"
             exit 1
           fi
 

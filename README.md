@@ -175,8 +175,39 @@ All options have sensible defaults:
 | `emitWebmanifest` | `true` | Set to `false` to skip per-locale `site.webmanifest` generation. |
 | `linkRewrite` | `"safety-net"` | `"off"` disables. |
 | `emitRootRedirect` | `locales.length > 1` | Root `index.html` that redirects to the visitor's language. Off by default for a single locale, so a page routed to `/` is not overwritten. |
+| `markdown` | `{}` | `.md` pages: `{ layout, eta, extensions }`. See [Markdown pages](#markdown-pages). |
 | `minifyHtml` | `true` | Minify every emitted HTML file (pages, 404s, root redirect) in production with `html-minifier-terser`. On large sites this dominates build time; `false` skips it. |
 | `copyPublic` | `true` | |
+
+## Markdown pages
+
+`.md` files in `pagesDir` render straight to HTML next to `.eta` pages, and the dev server reloads them on save. A page without a `routes.config.json` entry gets one: `index.md` → `/`, `guide/setup.md` → `/guide/setup`. List it there to give it localized paths or titles.
+
+```markdown
+---
+title: Setup # default: the first # heading
+layout: /layouts/docs # default: markdown.layout, then /layouts/main
+eta: true # run Eta over this page first (default: markdown.eta)
+---
+
+# Setup
+
+<%= t('setup.intro') %>
+```
+
+The layout receives everything an `.eta` page gets, plus `title`, `frontmatter` and `body` (the rendered HTML, output with `<%~ body %>`). Headings get GitHub-style ids, and relative `*.md` links point to the `.html` pages.
+
+The Eta pass is off by default: with it on, any `<%` in the page, code samples included, is executed. Turn it on for pages that need `t()` or other helpers.
+
+```js
+createMultiLocalePlugin({
+  markdown: {
+    layout: "/layouts/main",
+    eta: false,
+    extensions: [], // passed to marked.use(), after the built-ins
+  },
+});
+```
 
 ## Co-located page variants
 

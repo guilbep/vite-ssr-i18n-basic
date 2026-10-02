@@ -1,5 +1,6 @@
 <!doctype html>
 <html lang="<%= locale %>">
+  <head><title><%= it.title ?? "" %></title></head>
   <body>
     <%~ body %>
     <%~ include('/partials/footer') %>

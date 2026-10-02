@@ -2,6 +2,19 @@
 
 All notable changes to this project are documented in this file. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- **Markdown pages.** `.md` files in `pagesDir` render straight to HTML (frontmatter, GitHub-style heading ids, `.md` links → `.html`) inside a layout, and reload on save in dev. Pages without a `routes.config.json` entry get an automatic route. New `markdown` option: `layout`, `eta` (opt-in Eta pass over the source for `t()` and helpers), `extensions` (marked extensions).
+- Dependencies: `marked`, `js-yaml`.
+
+### Changed
+- A page variant suffix (`about.fr.eta`, `about.fr.md`) only counts when it is a configured locale; otherwise `about.fr` is a page of its own.
+- Two files defining the same page (`about.eta` and `about.md`) fail the build.
+
+### Fixed
+- The dev and preview servers serve `/<route>.html` for routes without an extension, so links to emitted `.html` files work in dev.
+
 ## [3.1.0] – 2026-10-02
 
 ### Added
