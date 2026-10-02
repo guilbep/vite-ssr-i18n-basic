@@ -94,11 +94,12 @@ jobs:
         working-directory: test/fixtures/single-locale
         run: |
           printf '<p>orphan</p>\n' > src/pages/orphan.eta
-          if npx vite build; then
+          if npx vite build > build.log 2>&1; then
             echo "::error::vite build passed with a page that has no route"
             exit 1
           fi
-          rm src/pages/orphan.eta
+          grep 'No route found for page key "orphan"' build.log || { cat build.log; exit 1; }
+          rm src/pages/orphan.eta build.log
 
       - name: Single-locale fixture fails the build on a broken page
         working-directory: test/fixtures/single-locale
