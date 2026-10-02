@@ -76,9 +76,15 @@ export class PageRenderer {
     // Get the route path for this page and locale
     const routePath = getRoutePath(pageKey, locale, routesConfig);
     if (!routePath) {
-      console.warn(
-        `No route found for page key "${pageKey}" in locale "${locale}"`,
-      );
+      const message = `No route found for page key "${pageKey}" in locale "${locale}"`;
+      // A production build must not ship without this page; the dev server
+      // keeps running so the author can add the route.
+      if (this.isProduction) {
+        throw new Error(
+          `${message}: add a route for it (or a path for this locale) to routes.config.json`,
+        );
+      }
+      console.warn(message);
       return;
     }
 

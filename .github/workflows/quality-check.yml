@@ -90,6 +90,16 @@ jobs:
           mv routes.config.json.bak routes.config.json
           rm build.log
 
+      - name: Single-locale fixture fails the build on a page without a route
+        working-directory: test/fixtures/single-locale
+        run: |
+          printf '<p>orphan</p>\n' > src/pages/orphan.eta
+          if npx vite build; then
+            echo "::error::vite build passed with a page that has no route"
+            exit 1
+          fi
+          rm src/pages/orphan.eta
+
       - name: Single-locale fixture fails the build on a broken page
         working-directory: test/fixtures/single-locale
         run: |
