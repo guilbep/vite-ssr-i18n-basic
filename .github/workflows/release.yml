@@ -34,9 +34,10 @@ jobs:
           cache: npm
 
       # OIDC trusted publishing requires npm ≥ 11.5.1. Node 22.x still ships
-      # npm 10.x as bundled, so install the latest npm before publish.
+      # npm 10.x as bundled, so install npm 11 before publish. Not @latest:
+      # npm 12's `npm ci` rejects a project locked by npm-shrinkwrap.json.
       - name: Upgrade npm to a version that supports OIDC publish
-        run: npm install -g npm@latest
+        run: npm install -g npm@11
 
       - name: Install dependencies
         run: npm ci
