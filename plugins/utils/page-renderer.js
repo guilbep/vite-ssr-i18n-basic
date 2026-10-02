@@ -21,6 +21,7 @@ export class PageRenderer {
     this.defaultLocale = options.defaultLocale || "en";
     this.localesMeta = options.localesMeta || {};
     this.linkRewrite = options.linkRewrite || "safety-net";
+    this.minifyHtml = options.minifyHtml ?? true;
     this.eta = options.eta; // Eta instance
     this.globals = options.globals || {}; // Template helpers spread into every render
     this.isProduction = false;
@@ -88,7 +89,7 @@ export class PageRenderer {
     if (!filePath) filePath = "index";
 
     // For index routes, place them in the locale directory structure
-    if (filePath === "en" || filePath === "fr") {
+    if (this.locales.includes(filePath)) {
       filePath = filePath + "/index";
     }
 
@@ -188,7 +189,7 @@ export class PageRenderer {
       );
 
       // Minify HTML in production
-      if (this.isProduction) {
+      if (this.isProduction && this.minifyHtml) {
         html = await minify(html, {
           removeComments: true,
           removeRedundantAttributes: true,
@@ -215,6 +216,13 @@ export class PageRenderer {
       writeFileSync(outputFile, html);
       console.log(`  ✓ ${routePath} → ${filePath}`);
     } catch (err) {
+      // A production build must not ship with a page silently missing; the
+      // dev server keeps running so the author can fix the template.
+      if (this.isProduction) {
+        throw new Error(`Error rendering ${routePath}: ${err.message}`, {
+          cause: err,
+        });
+      }
       console.error(`  ✗ Error rendering ${routePath}:`, err.message);
     }
   }

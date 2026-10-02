@@ -22,6 +22,7 @@ export class NotFoundGenerator {
     this.userEta = options.eta; // User-site Eta for custom 404 overrides
     this.globals = options.globals || {}; // Template helpers for custom 404 renders
     this.isProduction = false;
+    this.minifyHtml = options.minifyHtml ?? true;
 
     // Isolated Eta for the built-in default 404 template.
     this.eta = new Eta({
@@ -72,7 +73,7 @@ export class NotFoundGenerator {
         html = this.generateBasic404(locale, meta, routesConfig);
       }
 
-      if (this.isProduction) {
+      if (this.isProduction && this.minifyHtml) {
         html = await minify(html, {
           removeComments: true,
           collapseWhitespace: true,

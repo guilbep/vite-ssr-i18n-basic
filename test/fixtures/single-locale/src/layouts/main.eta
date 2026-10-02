@@ -1,0 +1,7 @@
+<!doctype html>
+<html lang="<%= locale %>">
+  <body>
+    <%~ body %>
+    <%~ include('/partials/footer') %>
+  </body>
+</html>

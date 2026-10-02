@@ -1,0 +1,3 @@
+<% layout('/layouts/main') %>
+<!-- kept when minifyHtml is false -->
+<h1>Single-locale home</h1>

@@ -50,6 +50,24 @@ jobs:
           grep -q 'Welcome' dist/en/index.html
           grep -q '<html lang="fr"' dist/fr/index.html
 
+      - name: Single-locale fixture (no root redirect, no minify, de/index.html)
+        working-directory: test/fixtures/single-locale
+        run: |
+          set -e
+          npx vite build
+          test -f dist/de/index.html
+          test ! -e dist/index.html
+          grep -q 'kept when minifyHtml is false' dist/de/index.html
+
+      - name: Single-locale fixture fails the build on a broken page
+        working-directory: test/fixtures/single-locale
+        run: |
+          printf '<%%= missing.value %%>\n' > src/pages/broken.eta
+          if npx vite build; then
+            echo "::error::vite build passed with a page that fails to render"
+            exit 1
+          fi
+
   pack:
     name: Verify npm pack contents
     runs-on: ubuntu-latest

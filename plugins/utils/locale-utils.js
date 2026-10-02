@@ -169,13 +169,12 @@ export function rewriteLinksWithRoutes(
         return match;
       }
 
-      // If it's already a properly formatted route path, leave it
-      if (
-        href.startsWith("/en/") ||
-        href.startsWith("/fr/") ||
-        href === "/en" ||
-        href === "/fr"
-      ) {
+      // If it's already a properly formatted route path, leave it. An empty
+      // basePath ("") would match every href, so it never counts here.
+      const prefixes = Object.values(routesConfig.basePath || {}).filter(
+        Boolean,
+      );
+      if (prefixes.some((p) => href === p || href.startsWith(`${p}/`))) {
         return match;
       }
 

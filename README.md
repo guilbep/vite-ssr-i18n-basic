@@ -174,6 +174,8 @@ All options have sensible defaults:
 | `emit404s` | `true` | |
 | `emitWebmanifest` | `true` | Set to `false` to skip per-locale `site.webmanifest` generation. |
 | `linkRewrite` | `"safety-net"` | `"off"` disables. |
+| `emitRootRedirect` | `locales.length > 1` | Root `index.html` that redirects to the visitor's language. Off by default for a single locale, so a page routed to `/` is not overwritten. |
+| `minifyHtml` | `true` | Minify every emitted HTML file (pages, 404s, root redirect) in production with `html-minifier-terser`. On large sites this dominates build time; `false` skips it. |
 | `copyPublic` | `true` | |
 
 ## Co-located page variants
