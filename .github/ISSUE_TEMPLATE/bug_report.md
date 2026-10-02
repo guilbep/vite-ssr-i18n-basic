@@ -32,7 +32,7 @@ If applicable, add screenshots to help explain your problem.
 ## 🌍 Environment
 
 - **OS**: [e.g. macOS, Windows, Linux]
-- **Node.js version**: [e.g. 18.17.0]
+- **Node.js version**: [e.g. 24.21.0]
 - **npm version**: [e.g. 9.6.7]
 - **Browser**: [e.g. Chrome 91, Safari 14]
 - **Project version**: [e.g. 1.0.0]

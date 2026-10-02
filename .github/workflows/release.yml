@@ -29,12 +29,12 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '22.x'
+          node-version: '24.x'
           registry-url: 'https://registry.npmjs.org/'
           cache: npm
 
-      # OIDC trusted publishing requires npm ≥ 11.5.1. Node 22.x still ships
-      # npm 10.x as bundled, so install the latest npm before publish.
+      # OIDC trusted publishing requires npm ≥ 11.5.1. Node 24.x only bundles
+      # it from 24.5.0, so install the latest npm before publish.
       - name: Upgrade npm to a version that supports OIDC publish
         run: npm install -g npm@latest
 

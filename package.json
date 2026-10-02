@@ -51,6 +51,9 @@
     "lighthouse:quick": "./lighthouse-test.sh",
     "perf": "npm run lighthouse"
   },
+  "engines": {
+    "node": ">=22.12"
+  },
   "peerDependencies": {
     "vite": ">=5.0.0"
   },
