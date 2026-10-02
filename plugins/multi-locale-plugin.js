@@ -325,7 +325,7 @@ export function multiLocalePlugin(options = {}) {
   // `index` → `/`, `guide/setup` → `/guide/setup`. Listed routes win, so a
   // Markdown page can still get localized paths and titles there.
   function loadRoutes(pages = discoverPages()) {
-    const config = loadRoutesConfig();
+    const config = loadRoutesConfig(locales);
     const routes = Array.isArray(config.routes) ? [...config.routes] : [];
     const listed = new Set(routes.map((r) => r.key));
     for (const [key, entry] of pages) {

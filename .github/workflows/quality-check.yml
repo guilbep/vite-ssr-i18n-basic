@@ -72,6 +72,24 @@ jobs:
           grep -q '<li>second</li>' dist/de/more.html
           test -f dist/de/img/dot.svg   # image next to the pages, under basePath
 
+      - name: Single-locale fixture fails the build without a usable routes.config.json
+        working-directory: test/fixtures/single-locale
+        run: |
+          mv routes.config.json routes.config.json.bak
+          if npx vite build > build.log 2>&1; then
+            echo "::error::vite build passed without routes.config.json"
+            exit 1
+          fi
+          grep 'Cannot load .*routes.config.json' build.log || { cat build.log; exit 1; }
+          echo '{ "basePath": {}, "routes": [] }' > routes.config.json
+          if npx vite build > build.log 2>&1; then
+            echo "::error::vite build passed with no basePath for locale de"
+            exit 1
+          fi
+          grep 'basePath has no entry for locale "de"' build.log || { cat build.log; exit 1; }
+          mv routes.config.json.bak routes.config.json
+          rm build.log
+
       - name: Single-locale fixture fails the build on a broken page
         working-directory: test/fixtures/single-locale
         run: |
