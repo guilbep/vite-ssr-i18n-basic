@@ -549,17 +549,30 @@ export function multiLocalePlugin(options = {}) {
 
   // Locale routing and asset serving, shared by the dev and preview
   // servers so a routing change cannot miss one of them.
+  // A request path mapped to an existing file inside the output dir; null
+  // when it can't be decoded or resolves anywhere else, so the request
+  // falls through instead of reading arbitrary files.
+  function outputFile(urlPath) {
+    const root = resolve(currentOutputDir);
+    let decoded;
+    try {
+      decoded = decodeURIComponent(urlPath);
+    } catch {
+      return null;
+    }
+    const file = resolve(root, `.${decoded}`);
+    return file.startsWith(root + sep) && existsSync(file) ? file : null;
+  }
+
   function routeMiddleware(req, res, next) {
     const url = req.url;
 
     // Serve shared assets from /assets/ - prevent locale prefixing
     if (url.startsWith("/assets/")) {
-      // Decode URL to handle spaces and special characters in filenames
-      const decodedUrl = decodeURIComponent(url);
-      const assetPath = join(currentOutputDir, decodedUrl);
-      if (existsSync(assetPath)) {
+      const assetPath = outputFile(url);
+      if (assetPath) {
         const content = readFileSync(assetPath);
-        const ext = extname(decodedUrl);
+        const ext = extname(assetPath);
         const mimeTypes = {
           ".css": "text/css",
           ".js": "text/javascript",
@@ -579,11 +592,8 @@ export function multiLocalePlugin(options = {}) {
     const urlPath = url.split("?")[0];
     const ext = extname(urlPath).toLowerCase();
     if (OPTIMIZABLE_IMAGE_EXTENSIONS.includes(ext)) {
-      const file = resolve(currentOutputDir, `.${decodeURIComponent(urlPath)}`);
-      if (
-        file.startsWith(resolve(currentOutputDir) + sep) &&
-        existsSync(file)
-      ) {
+      const file = outputFile(urlPath);
+      if (file) {
         res.setHeader("Content-Type", MIME_TYPES[ext]);
         res.end(readFileSync(file));
         return;
@@ -673,8 +683,8 @@ export function multiLocalePlugin(options = {}) {
     if (localeMatch) {
       const [, locale, path] = localeMatch;
       if (locales.includes(locale)) {
-        const filePath = `${currentOutputDir}/${locale}/${path || "index.html"}`;
-        if (existsSync(filePath)) {
+        const filePath = outputFile(`/${locale}/${path || "index.html"}`);
+        if (filePath) {
           const html = readFileSync(filePath, "utf8");
           res.setHeader("Content-Type", "text/html");
           res.end(html);
