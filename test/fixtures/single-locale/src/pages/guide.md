@@ -8,6 +8,8 @@ title: Guide
 
 See [more](more.md#details).
 
+![dot](img/dot.svg)
+
 ```text
 <%= not.evaluated %>
 ```

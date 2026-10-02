@@ -15,7 +15,7 @@ import { glob } from "glob";
 import { generateHash } from "./locale-utils.js";
 
 // Image file extensions supported for optimization
-const OPTIMIZABLE_IMAGE_EXTENSIONS = [
+export const OPTIMIZABLE_IMAGE_EXTENSIONS = [
   ".svg",
   ".png",
   ".jpg",

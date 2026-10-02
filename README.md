@@ -195,7 +195,7 @@ eta: true # run Eta over this page first (default: markdown.eta)
 <%= t('setup.intro') %>
 ```
 
-The layout receives everything an `.eta` page gets, plus `title`, `frontmatter` and `body` (the rendered HTML, output with `<%~ body %>`). Headings get GitHub-style ids, and relative `*.md` links point to the `.html` pages.
+The layout receives everything an `.eta` page gets, plus `title`, `frontmatter` and `body` (the rendered HTML, output with `<%~ body %>`). Headings get GitHub-style ids, and relative `*.md` links point to the `.html` pages. Images in `pagesDir` (png, jpg, jpeg, gif, svg, webp, avif) are copied as-is to the same relative path under each locale's `basePath`: `pagesDir/img/a.png` → `<out><basePath>/img/a.png`.
 
 The Eta pass is off by default: with it on, any `<%` in the page, code samples included, is executed. Turn it on for pages that need `t()` or other helpers.
 

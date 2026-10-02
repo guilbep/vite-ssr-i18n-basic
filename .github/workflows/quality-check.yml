@@ -70,6 +70,7 @@ jobs:
           grep -q '<footer>fixture</footer>' dist/de/guide.html
           grep -q '<p>Hallo</p>' dist/de/more.html
           grep -q '<li>second</li>' dist/de/more.html
+          test -f dist/de/img/dot.svg   # image next to the pages, under basePath
 
       - name: Single-locale fixture fails the build on a broken page
         working-directory: test/fixtures/single-locale
