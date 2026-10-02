@@ -50,6 +50,25 @@ jobs:
           grep -q 'Welcome' dist/en/index.html
           grep -q '<html lang="fr"' dist/fr/index.html
 
+      - name: Dev and preview servers only serve files from the output directory
+        run: |
+          echo "outside-output-file" > ../outside-output.txt
+          check() {
+            ./node_modules/.bin/vite "$@" --port 5199 --strictPort > server.log 2>&1 &
+            pid=$!
+            for i in $(seq 1 60); do curl -sf -o /dev/null http://localhost:5199/en/ && break; sleep 0.5; done
+            for path in /assets/%2e%2e/%2e%2e/%2e%2e/outside-output.txt /en/../../../outside-output.txt; do
+              if curl -s --path-as-is "http://localhost:5199$path" | grep -q outside-output-file; then
+                echo "::error::vite $* served $path from outside the output directory"
+                kill $pid; exit 1
+              fi
+            done
+            kill $pid; wait $pid 2>/dev/null || true
+          }
+          check
+          check preview
+          rm ../outside-output.txt server.log
+
       - name: Single-locale fixture (no root redirect, no minify, de/index.html)
         working-directory: test/fixtures/single-locale
         run: |
