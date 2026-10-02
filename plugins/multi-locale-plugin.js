@@ -177,8 +177,9 @@ export function multiLocalePlugin(options = {}) {
   // Configure Eta. Single `views` root (srcDir) so templates can reference
   // partials/layouts/pages with absolute paths like `/partials/head`,
   // `/layouts/main`. autoEscape on by default; templates use `<%~` to
-  // explicitly opt into raw (unescaped) output. cache off so the watcher
-  // doesn't need to invalidate per-file — the render budget is small.
+  // explicitly opt into raw (unescaped) output. cache off in dev so the
+  // watcher needs no per-file invalidation; configResolved turns it on for
+  // production builds.
   const eta = new Eta({
     views: srcDir,
     useWith: true,
@@ -503,6 +504,9 @@ export function multiLocalePlugin(options = {}) {
       // - preview: command='serve', mode='production'
       // - build: command='build', mode='production'
       isProduction = config.mode === "production";
+      // Without it every include() re-reads and recompiles its partial on
+      // every page: a nav partial cost ~0.1 s per build on 387 pages.
+      eta.configure({ cache: isProduction });
 
       // Set output directory based on mode
       currentOutputDir = isProduction ? outputDir : devOutputDir;

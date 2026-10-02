@@ -8,6 +8,9 @@ All notable changes to this project are documented in this file. Format loosely 
 - `emitRootRedirect` option. Defaults to `locales.length > 1`.
 - `minifyHtml` option (default `true`). Applies to pages, 404s and the root redirect. On a 386-page site, minification was 1.5 s of a 1.8 s `vite build` (#3).
 
+### Performance
+- Production builds cache compiled Eta templates. Every `include()` used to re-read and recompile its partial on every page; dev keeps the cache off so edits are picked up.
+
 ### Changed (behaviour)
 - **Single-locale sites no longer get a root redirect by default.** It overwrote any page routed to `/`. A single-locale site on a prefixed `basePath` (e.g. `/en`) that relied on it now needs `emitRootRedirect: true`.
 - **A page that fails to render now fails the production build.** It used to log `✗ Error rendering …` and exit 0 with the page missing. The dev server still logs and keeps running.
