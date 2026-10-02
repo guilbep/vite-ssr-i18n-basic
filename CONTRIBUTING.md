@@ -37,7 +37,7 @@ This project adheres to a [Code of Conduct](CODE_OF_CONDUCT.md). By participatin
 
 ### Prerequisites
 
-- Node.js 18+ 
+- Node.js 22.12+
 - npm or yarn
 - Git
 
