@@ -37,8 +37,9 @@ import { SitemapGenerator } from "./generators/sitemap-generator.js";
 import { NotFoundGenerator } from "./generators/notfound-generator.js";
 import { WebmanifestGenerator } from "./generators/webmanifest-generator.js";
 import { RootRedirectGenerator } from "./generators/root-redirect-generator.js";
+import { MarkdownRenderer } from "./utils/markdown.js";
 import {
-  LOCALE_RE,
+  parsePageFile,
   loadRoutesConfig,
   loadLocaleData,
   loadMetaData,
@@ -67,6 +68,7 @@ export function multiLocalePlugin(options = {}) {
     // more than one locale; with one, it would overwrite a page routed to /.
     emitRootRedirect = locales.length > 1,
     minifyHtml = true,
+    markdown = {}, // { layout, eta, extensions } for .md pages
   } = options;
 
   // Checked when a build or dev server starts, not when vite.config.js
@@ -270,6 +272,20 @@ export function multiLocalePlugin(options = {}) {
   // Hand the Eta instance + globals to components that render templates.
   pageRenderer.setEta(eta);
   pageRenderer.setGlobals(globals);
+  // The optional Eta pass over .md source gets its own instance with
+  // autoTrim off: a tag at a line end must keep the newline Markdown needs.
+  pageRenderer.setMarkdown(
+    new MarkdownRenderer({
+      ...markdown,
+      etaPass: new Eta({
+        views: srcDir,
+        useWith: true,
+        autoEscape: true,
+        cache: false,
+        autoTrim: false,
+      }),
+    }),
+  );
   notFoundGenerator.setEta(eta);
   notFoundGenerator.setGlobals(globals);
 
@@ -282,26 +298,49 @@ export function multiLocalePlugin(options = {}) {
     return prev !== m;
   }
 
+  // Pages are .eta templates or .md files, with co-located locale variants:
+  // page key => { default: "about.md", variants: { fr: "about.fr.md" } }.
+  function discoverPages() {
+    const byKey = new Map();
+    for (const f of glob.sync(`${pagesDir}/**/*.{eta,md}`).sort()) {
+      const rel = f.replace(`${pagesDir}/`, "");
+      const { key, locale } = parsePageFile(rel, locales);
+      const entry = byKey.get(key) || { default: null, variants: {} };
+      const taken = locale ? entry.variants[locale] : entry.default;
+      if (taken) {
+        throw new Error(`Both ${taken} and ${rel} define page "${key}"`);
+      }
+      if (locale) entry.variants[locale] = rel;
+      else entry.default = rel;
+      byKey.set(key, entry);
+    }
+    return byKey;
+  }
+
+  // routes.config.json, plus a route for each .md page it doesn't list:
+  // `index` → `/`, `guide/setup` → `/guide/setup`. Listed routes win, so a
+  // Markdown page can still get localized paths and titles there.
+  function loadRoutes(pages = discoverPages()) {
+    const config = loadRoutesConfig();
+    const routes = Array.isArray(config.routes) ? [...config.routes] : [];
+    const listed = new Set(routes.map((r) => r.key));
+    for (const [key, entry] of pages) {
+      const file = entry.default || Object.values(entry.variants)[0];
+      if (listed.has(key) || !file.endsWith(".md")) continue;
+      const path = key === "index" ? "/" : `/${key}`;
+      routes.push({ key, path, title: key, hidden: true });
+    }
+    return { ...config, routes };
+  }
+
   // Generate all pages for all locales
   async function generatePages() {
     const localeData = loadLocaleData(locales, dataDir);
-    const routesConfig = loadRoutesConfig();
+    const byBase = discoverPages();
+    const routesConfig = loadRoutes(byBase);
     const metaData = loadMetaData(dataDir);
 
     console.log(`🌍 Generating pages for locales: ${locales.join(", ")}`);
-
-    // Discover pages with co-located variants
-    const allFiles = glob.sync(`${pagesDir}/**/*.eta`);
-    const byBase = new Map(); // basePath => { default: file, variants: {en:file,fr:file} }
-    for (const f of allFiles) {
-      const rel = f.replace(`${pagesDir}/`, "");
-      const m = rel.match(LOCALE_RE);
-      const base = m ? rel.replace(LOCALE_RE, ".eta") : rel;
-      const entry = byBase.get(base) || { default: null, variants: {} };
-      if (m) entry.variants[m[1]] = rel;
-      else entry.default = rel;
-      byBase.set(base, entry);
-    }
 
     // Update all components with current state
     const assetHashes = assetProcessor.getAssetHashes();
@@ -309,13 +348,13 @@ export function multiLocalePlugin(options = {}) {
     notFoundGenerator.setAssetHashes(assetHashes);
 
     // Render pages
-    for (const [baseRel, entry] of byBase) {
+    for (const [pageKey, entry] of byBase) {
       for (const locale of locales) {
         const relTemplate = entry.variants[locale] || entry.default; // fallback
         if (!relTemplate) continue; // no default: skip
         await pageRenderer.renderOne({
           relTemplate,
-          baseRel,
+          pageKey,
           locale,
           availableLocales: Object.keys(entry.variants),
           localeData,
@@ -348,8 +387,8 @@ export function multiLocalePlugin(options = {}) {
   // Setup file watcher for development with incremental rebuilds
   function setupWatcher() {
     const watchPaths = [
-      // Eta templates
-      `${pagesDir}/**/*.eta`,
+      // Pages (Eta templates and Markdown) and Eta layouts/partials
+      `${pagesDir}/**/*.{eta,md}`,
       `${layoutsDir}/**/*.eta`,
       `${partialsDir}/**/*.eta`,
       // Data files
@@ -374,7 +413,7 @@ export function multiLocalePlugin(options = {}) {
 
       // Determine file type and appropriate action
       const ext = extname(path).toLowerCase();
-      const isTemplate = ext === ".eta";
+      const isTemplate = ext === ".eta" || ext === ".md";
       const isData = ext === ".json" && path.startsWith(dataDir);
       const isAsset =
         ext === ".css" ||
@@ -389,31 +428,19 @@ export function multiLocalePlugin(options = {}) {
       }
 
       const localeData = loadLocaleData(locales, dataDir);
-      const routesConfig = loadRoutesConfig();
       const metaData = loadMetaData(dataDir);
 
       // For templates and data files, handle page rebuilding
       if (isTemplate || isData) {
-        // Discover pages with co-located variants for incremental rebuild
-        const allFiles = glob.sync(`${pagesDir}/**/*.eta`);
-        const byBase = new Map();
+        const byBase = discoverPages();
+        const routesConfig = loadRoutes(byBase);
 
-        for (const f of allFiles) {
-          const rel = f.replace(`${pagesDir}/`, "");
-          const m = rel.match(LOCALE_RE);
-          const baseName = m ? rel.replace(LOCALE_RE, ".eta") : rel;
-          const entry = byBase.get(baseName) || { default: null, variants: {} };
-          if (m) entry.variants[m[1]] = rel;
-          else entry.default = rel;
-          byBase.set(baseName, entry);
-        }
-
-        // If a page changed: rebuild that base page for all locales
+        // If a page changed: rebuild that page for all locales
         if (path.startsWith(pagesDir)) {
           const rel = path.replace(`${pagesDir}/`, "");
-          const base = rel.replace(LOCALE_RE, ".eta");
+          const { key } = parsePageFile(rel, locales);
           await pageRenderer.rebuildBase(
-            base,
+            key,
             localeData,
             routesConfig,
             metaData,
@@ -626,7 +653,7 @@ export function multiLocalePlugin(options = {}) {
         }
 
         // Load routes configuration for URL matching
-        const routesConfig = loadRoutesConfig();
+        const routesConfig = loadRoutes();
         const routesList = routesConfig.routes || [];
 
         // Try to match the URL to a route in any locale
@@ -640,7 +667,11 @@ export function multiLocalePlugin(options = {}) {
             const cleanRoutePath = routePath.replace(/\/$/, "");
             const cleanUrlPath = url.replace(/\/$/, "");
 
-            if (cleanRoutePath === cleanUrlPath) {
+            // Pages are emitted as .html, and links to them say so
+            if (
+              cleanRoutePath === cleanUrlPath ||
+              `${cleanRoutePath}.html` === cleanUrlPath
+            ) {
               // Convert route path to file path using same logic as renderOne
               let filePath = routePath.replace(/^\//, "").replace(/\/$/, "");
               if (!filePath) filePath = "index";
@@ -746,7 +777,7 @@ export function multiLocalePlugin(options = {}) {
         }
 
         // Load routes configuration for URL matching
-        const routesConfig = loadRoutesConfig();
+        const routesConfig = loadRoutes();
         const routesList = routesConfig.routes || [];
 
         // Try to match the URL to a route in any locale
@@ -760,7 +791,11 @@ export function multiLocalePlugin(options = {}) {
             const cleanRoutePath = routePath.replace(/\/$/, "");
             const cleanUrlPath = url.replace(/\/$/, "");
 
-            if (cleanRoutePath === cleanUrlPath) {
+            // Pages are emitted as .html, and links to them say so
+            if (
+              cleanRoutePath === cleanUrlPath ||
+              `${cleanRoutePath}.html` === cleanUrlPath
+            ) {
               // Convert route path to file path using same logic as renderOne
               let filePath = routePath.replace(/^\//, "").replace(/\/$/, "");
               if (!filePath) filePath = "index";

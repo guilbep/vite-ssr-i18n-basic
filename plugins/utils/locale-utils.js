@@ -26,8 +26,18 @@ export function getRoutePath(pageKey, locale, routesConfig) {
 // Helper function to get page key from filename
 export function getPageKey(filename) {
   // Remove extension and locale suffix
-  const base = filename.replace(/\.eta$/, "").replace(/\.[a-z]{2}$/, "");
+  const base = filename.replace(/\.(eta|md)$/, "").replace(/\.[a-z]{2}$/, "");
   return base;
+}
+
+// Page file (relative to pagesDir) → page key and locale variant.
+// `about.fr.md` is the `fr` variant of `about` only when `fr` is a
+// configured locale; otherwise `about.fr` is a page key of its own.
+export function parsePageFile(rel, locales) {
+  const stem = rel.replace(/\.(eta|md)$/, "");
+  const match = stem.match(/\.([a-z]{2})$/);
+  const locale = match && locales.includes(match[1]) ? match[1] : null;
+  return { key: locale ? stem.slice(0, -3) : stem, locale };
 }
 
 // Helper function to get all route paths for a page key across all locales

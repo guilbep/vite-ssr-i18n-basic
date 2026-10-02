@@ -58,7 +58,9 @@
     "chokidar": "^3.6.0",
     "eta": "^4.6.0",
     "glob": "^11.0.3",
-    "html-minifier-terser": "^7.2.0"
+    "html-minifier-terser": "^7.2.0",
+    "js-yaml": "^5.4.2",
+    "marked": "^18.0.14"
   },
   "optionalDependencies": {
     "sharp": "^0.35.5"

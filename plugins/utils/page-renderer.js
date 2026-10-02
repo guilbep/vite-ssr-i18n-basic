@@ -24,6 +24,7 @@ export class PageRenderer {
     this.minifyHtml = options.minifyHtml ?? true;
     this.eta = options.eta; // Eta instance
     this.globals = options.globals || {}; // Template helpers spread into every render
+    this.markdown = options.markdown; // MarkdownRenderer for .md pages
     this.isProduction = false;
     this.assetHashes = {};
     this.fileMTime = new Map();
@@ -39,6 +40,10 @@ export class PageRenderer {
 
   setGlobals(globals) {
     this.globals = globals;
+  }
+
+  setMarkdown(markdown) {
+    this.markdown = markdown;
   }
 
   setAssetHashes(assetHashes) {
@@ -58,6 +63,7 @@ export class PageRenderer {
   async renderOne({
     relTemplate,
     baseRel,
+    pageKey: key, // preferred over baseRel; set by the plugin's discovery
     locale,
     availableLocales,
     localeData,
@@ -65,7 +71,7 @@ export class PageRenderer {
     metaData,
   }) {
     const templateName = "pages/" + relTemplate;
-    const pageKey = getPageKey(baseRel);
+    const pageKey = key ?? getPageKey(baseRel);
 
     // Get the route path for this page and locale
     const routePath = getRoutePath(pageKey, locale, routesConfig);
@@ -128,7 +134,7 @@ export class PageRenderer {
           return result;
         });
 
-      let html = this.eta.render(templateName, {
+      const data = {
         ...this.globals, // inline_asset, data_uri, asset, manifest, url, absoluteUrl, ...
         locale,
         locales: this.locales,
@@ -178,7 +184,11 @@ export class PageRenderer {
         getRouteUrl: (pageKey, targetLocale = locale) => {
           return getRoutePath(pageKey, targetLocale, routesConfig) || "#";
         },
-      });
+      };
+
+      let html = relTemplate.endsWith(".md")
+        ? this.markdown.render(join(this.pagesDir, relTemplate), data, this.eta)
+        : this.eta.render(templateName, data);
 
       // Update link rewriting to be aware of routes
       html = rewriteLinksWithRoutes(
@@ -229,6 +239,7 @@ export class PageRenderer {
 
   // Rebuild specific base page for incremental builds
   async rebuildBase(base, localeData, routesConfig, metaData, byBaseMap) {
+    // `base` is the page key (no extension) the plugin's discovery uses.
     const entry = byBaseMap.get(base);
     if (entry) {
       for (const locale of this.locales) {
@@ -236,7 +247,7 @@ export class PageRenderer {
         if (!relTemplate) continue;
         await this.renderOne({
           relTemplate,
-          baseRel: base,
+          pageKey: base,
           locale,
           availableLocales: Object.keys(entry.variants),
           localeData,
