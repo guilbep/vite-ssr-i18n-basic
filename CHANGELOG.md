@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented in this file. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [3.2.0] – 2026-10-02
 
 ### Added
 - **Markdown pages.** `.md` files in `pagesDir` render straight to HTML (frontmatter, GitHub-style heading ids, `.md` links → `.html`) inside a layout, and reload on save in dev. Pages without a `routes.config.json` entry get an automatic route. New `markdown` option: `layout`, `eta` (opt-in Eta pass over the source for `t()` and helpers), `extensions` (marked extensions).
