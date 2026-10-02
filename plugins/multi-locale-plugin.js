@@ -17,7 +17,7 @@
  * - root-redirect-generator.js: root index.html with language detection
  */
 
-import { resolve, join, dirname, basename, extname } from "path";
+import { resolve, join, dirname, basename, extname, sep } from "path";
 import {
   readFileSync,
   writeFileSync,
@@ -25,13 +25,17 @@ import {
   existsSync,
   statSync,
   rmSync,
+  copyFileSync,
 } from "fs";
 import { glob } from "glob";
 import { Eta } from "eta";
 import chokidar from "chokidar";
 
 // Import refactored modules
-import { AssetProcessor } from "./utils/asset-processor.js";
+import {
+  AssetProcessor,
+  OPTIMIZABLE_IMAGE_EXTENSIONS,
+} from "./utils/asset-processor.js";
 import { PageRenderer } from "./utils/page-renderer.js";
 import { SitemapGenerator } from "./generators/sitemap-generator.js";
 import { NotFoundGenerator } from "./generators/notfound-generator.js";
@@ -333,6 +337,22 @@ export function multiLocalePlugin(options = {}) {
     return { ...config, routes };
   }
 
+  // Images next to pages, copied as-is to where a page at the same relative
+  // path lands: `img/a.png` → `<out><basePath>/img/a.png` for each locale.
+  const PAGE_ASSET_GLOB = `**/*.{${OPTIMIZABLE_IMAGE_EXTENSIONS.map((e) => e.slice(1)).join(",")}}`;
+  function copyPageAssets(routesConfig) {
+    for (const rel of glob.sync(PAGE_ASSET_GLOB, {
+      cwd: pagesDir,
+      nocase: true,
+    })) {
+      for (const locale of locales) {
+        const dest = join(currentOutputDir, routesConfig.basePath[locale], rel);
+        mkdirSync(dirname(dest), { recursive: true });
+        copyFileSync(join(pagesDir, rel), dest);
+      }
+    }
+  }
+
   // Generate all pages for all locales
   async function generatePages() {
     const localeData = loadLocaleData(locales, dataDir);
@@ -363,6 +383,7 @@ export function multiLocalePlugin(options = {}) {
         });
       }
     }
+    copyPageAssets(routesConfig);
 
     if (emitRootRedirect) {
       await rootRedirectGenerator.generateRootRedirect(routesConfig);
@@ -387,8 +408,10 @@ export function multiLocalePlugin(options = {}) {
   // Setup file watcher for development with incremental rebuilds
   function setupWatcher() {
     const watchPaths = [
-      // Pages (Eta templates and Markdown) and Eta layouts/partials
+      // Pages (Eta templates and Markdown), the images next to them, and
+      // Eta layouts/partials
       `${pagesDir}/**/*.{eta,md}`,
+      `${pagesDir}/${PAGE_ASSET_GLOB}`,
       `${layoutsDir}/**/*.eta`,
       `${partialsDir}/**/*.eta`,
       // Data files
@@ -458,6 +481,9 @@ export function multiLocalePlugin(options = {}) {
 
         // Regenerate all pages to pick up new asset hashes
         await generatePages();
+      } else if (path.startsWith(pagesDir)) {
+        // An image next to the pages: refresh its copies
+        copyPageAssets(loadRoutes());
       }
 
       // Trigger HMR if in dev mode
@@ -544,6 +570,22 @@ export function multiLocalePlugin(options = {}) {
         res.setHeader("Content-Type", mimeTypes[ext] || "text/plain");
         res.setHeader("Cache-Control", "public, max-age=31536000"); // 1 year cache
         res.end(content);
+        return;
+      }
+    }
+
+    // Images copied next to the pages sit under a locale's basePath,
+    // possibly "": serve them before the locale fallback claims them.
+    const urlPath = url.split("?")[0];
+    const ext = extname(urlPath).toLowerCase();
+    if (OPTIMIZABLE_IMAGE_EXTENSIONS.includes(ext)) {
+      const file = resolve(currentOutputDir, `.${decodeURIComponent(urlPath)}`);
+      if (
+        file.startsWith(resolve(currentOutputDir) + sep) &&
+        existsSync(file)
+      ) {
+        res.setHeader("Content-Type", MIME_TYPES[ext]);
+        res.end(readFileSync(file));
         return;
       }
     }
