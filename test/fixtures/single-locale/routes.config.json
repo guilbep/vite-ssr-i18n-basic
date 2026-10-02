@@ -1,0 +1,8 @@
+{
+  "locales": ["de"],
+  "basePath": { "de": "/de" },
+  "routes": [
+    { "key": "index", "path": "/", "title": "Start" },
+    { "key": "broken", "path": "/broken", "title": "Broken", "hidden": true }
+  ]
+}

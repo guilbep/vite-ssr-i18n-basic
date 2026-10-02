@@ -13,6 +13,7 @@ export class RootRedirectGenerator {
     this.locales = options.locales || ["en", "fr"];
     this.defaultLocale = options.defaultLocale || "en";
     this.isProduction = false;
+    this.minifyHtml = options.minifyHtml ?? true;
 
     // Isolated Eta scoped to the package's own templates dir.
     this.eta = new Eta({
@@ -52,7 +53,7 @@ export class RootRedirectGenerator {
     });
 
     // Minify root index in production
-    if (this.isProduction) {
+    if (this.isProduction && this.minifyHtml) {
       rootIndex = await minify(rootIndex, {
         removeComments: true,
         removeRedundantAttributes: true,

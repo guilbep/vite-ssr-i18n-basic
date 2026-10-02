@@ -63,15 +63,22 @@ export function multiLocalePlugin(options = {}) {
     emitWebmanifest = true,
     linkRewrite = "safety-net",
     copyPublic = true, // Option to disable public directory copying
+    // A language-detection redirect at the site root only makes sense with
+    // more than one locale; with one, it would overwrite a page routed to /.
+    emitRootRedirect = locales.length > 1,
+    minifyHtml = true,
   } = options;
 
-  // Validate required directories exist
-  const requiredDirs = [srcDir, pagesDir, layoutsDir, partialsDir, dataDir];
-  for (const dir of requiredDirs) {
-    if (!existsSync(dir)) {
-      throw new Error(
-        `Required directory "${dir}" does not exist. Please create it or adjust your plugin configuration.`,
-      );
+  // Checked when a build or dev server starts, not when vite.config.js
+  // loads, so a generator running earlier can still create pagesDir.
+  function assertRequiredDirs() {
+    const requiredDirs = [srcDir, pagesDir, layoutsDir, partialsDir, dataDir];
+    for (const dir of requiredDirs) {
+      if (!existsSync(dir)) {
+        throw new Error(
+          `Required directory "${dir}" does not exist. Please create it or adjust your plugin configuration.`,
+        );
+      }
     }
   }
 
@@ -106,6 +113,7 @@ export function multiLocalePlugin(options = {}) {
     defaultLocale,
     localesMeta,
     linkRewrite,
+    minifyHtml,
   });
 
   const sitemapGenerator = new SitemapGenerator({
@@ -121,6 +129,7 @@ export function multiLocalePlugin(options = {}) {
     locales,
     defaultLocale,
     localesMeta,
+    minifyHtml,
   });
 
   const webmanifestGenerator = new WebmanifestGenerator({
@@ -134,6 +143,7 @@ export function multiLocalePlugin(options = {}) {
     outputDir: currentOutputDir,
     locales,
     defaultLocale,
+    minifyHtml,
   });
 
   // Track file modification times for incremental rebuilds
@@ -182,7 +192,6 @@ export function multiLocalePlugin(options = {}) {
   // (manifest, currentOutputDir) close over it here; helpers that need
   // per-render state (t) are added on top of these in page-renderer.
   const manifest = assetProcessor.getManifest();
-  console.log("manifest", manifest);
 
   const MIME_TYPES = {
     ".webp": "image/webp",
@@ -283,7 +292,6 @@ export function multiLocalePlugin(options = {}) {
     // Discover pages with co-located variants
     const allFiles = glob.sync(`${pagesDir}/**/*.eta`);
     const byBase = new Map(); // basePath => { default: file, variants: {en:file,fr:file} }
-    console.log("generatePages allFiles", allFiles);
     for (const f of allFiles) {
       const rel = f.replace(`${pagesDir}/`, "");
       const m = rel.match(LOCALE_RE);
@@ -316,8 +324,9 @@ export function multiLocalePlugin(options = {}) {
       }
     }
 
-    // Generate root redirect page
-    await rootRedirectGenerator.generateRootRedirect(routesConfig);
+    if (emitRootRedirect) {
+      await rootRedirectGenerator.generateRootRedirect(routesConfig);
+    }
 
     // Generate sitemaps if enabled
     if (emitSitemaps) {
@@ -525,6 +534,7 @@ export function multiLocalePlugin(options = {}) {
     configureServer(devServer) {
       isServing = true;
       server = devServer;
+      assertRequiredDirs();
 
       // Setup cleanup for development mode
       if (!isProduction) {
@@ -632,7 +642,7 @@ export function multiLocalePlugin(options = {}) {
               if (!filePath) filePath = "index";
 
               // For index routes, place them in the locale directory structure
-              if (filePath === "en" || filePath === "fr") {
+              if (locales.includes(filePath)) {
                 filePath = filePath + "/index";
               }
 
@@ -656,7 +666,7 @@ export function multiLocalePlugin(options = {}) {
                 if (!filePath) filePath = "index";
 
                 // For index routes, place them in the locale directory structure
-                if (filePath === "en" || filePath === "fr") {
+                if (locales.includes(filePath)) {
                   filePath = filePath + "/index";
                 }
 
@@ -752,7 +762,7 @@ export function multiLocalePlugin(options = {}) {
               if (!filePath) filePath = "index";
 
               // For index routes, place them in the locale directory structure
-              if (filePath === "en" || filePath === "fr") {
+              if (locales.includes(filePath)) {
                 filePath = filePath + "/index";
               }
 
@@ -776,7 +786,7 @@ export function multiLocalePlugin(options = {}) {
                 if (!filePath) filePath = "index";
 
                 // For index routes, place them in the locale directory structure
-                if (filePath === "en" || filePath === "fr") {
+                if (locales.includes(filePath)) {
                   filePath = filePath + "/index";
                 }
 
@@ -815,6 +825,7 @@ export function multiLocalePlugin(options = {}) {
 
     async buildStart() {
       if (!isServing) {
+        assertRequiredDirs();
         console.log("🏗️  Building multi-locale site...");
         // Ensure output directory exists and is clean
         if (!existsSync(currentOutputDir)) {

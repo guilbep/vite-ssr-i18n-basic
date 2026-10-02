@@ -2,6 +2,21 @@
 
 All notable changes to this project are documented in this file. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- `emitRootRedirect` option. Defaults to `locales.length > 1`.
+- `minifyHtml` option (default `true`). Applies to pages, 404s and the root redirect. On a 386-page site, minification was 1.5 s of a 1.8 s `vite build` (#3).
+
+### Changed (behaviour)
+- **Single-locale sites no longer get a root redirect by default.** It overwrote any page routed to `/`. A single-locale site on a prefixed `basePath` (e.g. `/en`) that relied on it now needs `emitRootRedirect: true`.
+- **A page that fails to render now fails the production build.** It used to log `✗ Error rendering …` and exit 0 with the page missing. The dev server still logs and keeps running.
+- Required directories are checked when a build or dev server starts, not when `vite.config.js` loads, so a generator can create `pagesDir` first.
+
+### Fixed
+- Locale index routes (`/<locale>/` → `<locale>/index.html`) and the link rewriter worked only for `en` and `fr`; they now use the configured `locales` and `basePath`.
+- Removed two debug logs (the asset manifest and the full page list) printed on every build.
+
 ## [3.0.0] – 2026-05-27
 
 ### Changed (breaking)
