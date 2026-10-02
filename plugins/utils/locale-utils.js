@@ -1,5 +1,6 @@
 import { readFileSync } from "fs";
 import { createHash } from "crypto";
+import { resolve } from "path";
 
 // Locale regex for co-located variants
 export const LOCALE_RE = /\.([a-z]{2})\.eta$/;
@@ -67,15 +68,22 @@ export function getAllRoutePaths(pageKey, routesConfig) {
   return paths;
 }
 
-// Load routes configuration
-export function loadRoutesConfig() {
+// Load routes configuration. Every page path starts from basePath[locale],
+// so a missing file or locale entry fails here, not as an undefined/... path.
+export function loadRoutesConfig(locales) {
+  const file = resolve("routes.config.json");
+  let config;
   try {
-    const routesData = JSON.parse(readFileSync("routes.config.json", "utf8"));
-    return routesData;
+    config = JSON.parse(readFileSync(file, "utf8"));
   } catch (err) {
-    console.warn("Could not load routes.config.json:", err.message);
-    return { routes: {} };
+    throw new Error(`Cannot load ${file}: ${err.message}`, { cause: err });
   }
+  for (const locale of locales) {
+    if (typeof config.basePath?.[locale] !== "string") {
+      throw new Error(`${file}: basePath has no entry for locale "${locale}"`);
+    }
+  }
+  return config;
 }
 
 // Load locale data

@@ -88,6 +88,7 @@ All of `src/`, `src/pages`, `src/layouts`, `src/partials`, `src/data` must exist
 - `key` matches the page filename (`src/pages/<key>.eta`).
 - `path` is appended to `basePath[locale]`. Can be a string (same for all locales) or an object per locale.
 - `landing_page` is special — used by the 404 and webmanifest generators to determine the per-locale output directory.
+- The file is read from the working directory. The plugin throws if it is missing, is not valid JSON, or has no `basePath` entry for one of the plugin's `locales` (`""` is a valid entry).
 
 ## Locale data
 
