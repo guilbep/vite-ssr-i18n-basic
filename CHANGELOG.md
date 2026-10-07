@@ -2,6 +2,27 @@
 
 All notable changes to this project are documented in this file. Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project follows [Semantic Versioning](https://semver.org/).
 
+## [3.3.0] – 2026-10-02
+
+### Added
+- Images next to pages in `pagesDir` (png, jpg, gif, svg, webp, avif) are copied to the output under each locale's `basePath`, in build and dev, and the dev and preview servers serve them with their image type (#10).
+
+### Changed (behaviour)
+- **A missing or invalid `routes.config.json` fails the build**, as does a `basePath` without an entry for a configured locale. It used to warn and build `undefined/…` paths (#8).
+- **A page without a route for a locale fails a production build**, with the page key, locale and a `routes.config.json` hint. It used to be skipped silently; dev keeps the warning. This includes a route whose localized `path` leaves a locale out (#9).
+- `package.json` declares `engines.node >=22.12` (Node 20 reached end of life in April 2026); npm warns on older Node. The `vite >=5` peer range is unchanged (#14).
+
+### Fixed
+- The dev and preview servers only serve files inside the output directory; a malformed URL escape is a 404 instead of a 500.
+
+### Security
+- `brace-expansion` 5.0.12 in the lockfile (high-severity DoS advisory in the production tree) (#11).
+
+### Internal
+- Dependencies are locked with `package-lock.json` instead of `npm-shrinkwrap.json`, and releases use the latest npm again (#13).
+- CI tests Node 22, 24 and 26; releases run on Node 24 (#14).
+- The dev and preview servers share one route middleware instead of two copies (#15).
+
 ## [3.2.0] – 2026-10-02
 
 ### Added
